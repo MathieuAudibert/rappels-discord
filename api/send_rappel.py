@@ -5,11 +5,15 @@ from datetime import datetime, timedelta
 
 DATE_FORMAT = '%Y-%m-%d'
 
-def handler(request, context):
-    method = request.get('httpMethod') or request.get('method', 'GET')
+def handler(req):
+    method = req.get('method', req.get('httpMethod', 'GET'))
     
     if method != 'POST':
-        return {"statusCode": 405,"body": json.dumps({"error": "method not allowed, only POST"})}
+        return {
+            "statusCode": 405,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": "method not allowed, only POST"})
+        }
 
     TOKEN = os.getenv("TOKEN_DISCORD")
     ID_GROUPE = os.getenv("TARGET_GROUP_ID")
@@ -17,31 +21,47 @@ def handler(request, context):
     if not all([TOKEN, ID_GROUPE]):
         error_message = "missing env var (TOKEN_DISCORD or TARGET_GROUP_ID)"
         print(f"[ERROR]: {error_message}") 
-        return {"statusCode": 500,"body": json.dumps({"error": error_message})}
+        return {
+            "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": error_message})
+        }
     
     try:
-        raw_body = request.get('body', '{}')
+        raw_body = req.get('body', '{}')
         if isinstance(raw_body, str):
             data = json.loads(raw_body)
         else:
-            data = raw_body
+            data = raw_body if raw_body else {}
             
         CONTENT = data.get('message')
-        TARGET_DATE_STR = data.get('target_date')
+        TARGET_DATE_STR = data.get('target_date') or data.get('date')
     except Exception as e:
         error_message = f"invalid JSON body: {str(e)}"
         print(f"[ERROR]: {error_message}")
-        return {"statusCode": 400,"body": json.dumps({"error": error_message})}
+        return {
+            "statusCode": 400,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": error_message})
+        }
 
     if not CONTENT:
         error_message = "message is required in body"
         print(f"[ERROR]: {error_message}")
-        return {"statusCode": 400,"body": json.dumps({"error": error_message})}
+        return {
+            "statusCode": 400,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": error_message})
+        }
     
     if not TARGET_DATE_STR:
         error_message = "target_date is required in body"
         print(f"[ERROR]: {error_message}")
-        return {"statusCode": 400,"body": json.dumps({"error": error_message})}
+        return {
+            "statusCode": 400,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": error_message})
+        }
     
     try:
         target_date_obj = datetime.strptime(TARGET_DATE_STR, DATE_FORMAT).date()
@@ -50,7 +70,11 @@ def handler(request, context):
     except ValueError:
         error_message = f"invalid date format - {DATE_FORMAT} (ex: 2026-01-01)"
         print(f"[ERROR]: {error_message}")
-        return {"statusCode": 400,"body": json.dumps({"error": error_message})}
+        return {
+            "statusCode": 400,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": error_message})
+        }
 
     url = f"https://discord.com/api/v9/channels/{ID_GROUPE}/messages"
     headers = {
@@ -76,6 +100,7 @@ def handler(request, context):
             print(f"[INFO]: {log_message}")
             return {
                 "statusCode": 200,
+                "headers": {"Content-Type": "application/json"},
                 "body": json.dumps({
                     "success": True,
                     "message": log_message,
@@ -88,6 +113,7 @@ def handler(request, context):
             print(f"[ERROR]: {error_message}")
             return {
                 "statusCode": 500,
+                "headers": {"Content-Type": "application/json"},
                 "body": json.dumps({"error": error_message})
             }
     except requests.exceptions.RequestException as e:
@@ -95,5 +121,6 @@ def handler(request, context):
         print(f"[ERROR]: {error_message}")
         return {
             "statusCode": 500,
+            "headers": {"Content-Type": "application/json"},
             "body": json.dumps({"error": error_message})
         }

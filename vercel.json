@@ -1,0 +1,10 @@
+{
+  "version": 2,
+  "routes": [
+    {
+      "src": "/app/send_rappel",
+      "dest": "/api/send_rappel.py"
+    }
+  ]
+}
+
