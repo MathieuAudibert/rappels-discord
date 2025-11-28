@@ -1,0 +1,7 @@
+{
+    "functions": {
+        "api/send_rappel.py": {
+            "runtime": "python3.9"
+        }
+    }
+}
