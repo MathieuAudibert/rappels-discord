@@ -4,6 +4,10 @@
     {
       "src": "/app/send_rappel",
       "dest": "/api/send_rappel.py"
+    },
+    {
+      "src": "/",
+      "dest": "/index.html"
     }
   ]
 }

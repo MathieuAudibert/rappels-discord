@@ -6,7 +6,12 @@ from datetime import datetime, timedelta
 DATE_FORMAT = '%Y-%m-%d'
 
 def handler(req):
-    method = req.get('method', req.get('httpMethod', 'GET'))
+    if isinstance(req, dict):
+        method = req.get('method') or req.get('httpMethod', 'GET')
+        raw_body = req.get('body', '{}')
+    else:
+        method = getattr(req, 'method', None) or getattr(req, 'httpMethod', 'GET')
+        raw_body = getattr(req, 'body', '{}')
     
     if method != 'POST':
         return {
@@ -28,16 +33,28 @@ def handler(req):
         }
     
     try:
-        raw_body = req.get('body', '{}')
         if isinstance(raw_body, str):
-            data = json.loads(raw_body)
+            if raw_body:
+                data = json.loads(raw_body)
+            else:
+                data = {}
+        elif isinstance(raw_body, dict):
+            data = raw_body
         else:
-            data = raw_body if raw_body else {}
+            data = {}
             
         CONTENT = data.get('message')
         TARGET_DATE_STR = data.get('target_date') or data.get('date')
-    except Exception as e:
+    except json.JSONDecodeError as e:
         error_message = f"invalid JSON body: {str(e)}"
+        print(f"[ERROR]: {error_message}")
+        return {
+            "statusCode": 400,
+            "headers": {"Content-Type": "application/json"},
+            "body": json.dumps({"error": error_message})
+        }
+    except Exception as e:
+        error_message = f"error parsing body: {str(e)}"
         print(f"[ERROR]: {error_message}")
         return {
             "statusCode": 400,
